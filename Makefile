@@ -1,14 +1,14 @@
 EXENAME = isingmodel
 OBJS = main.o
 
-CXX = clang++
-CXXFLAGS = -g -std=c++11 -Wall -pedantic
+CXX = g++ 
+CXXFLAGS = -c
 
 
-isingmodel: main.o
+isingmodel: main.o input.h
 	$(CXX) -o isingmodel main.o
 
-main.o : main.cpp
+main.o : main.cpp input.h
 	$(CXX) $(CXXFLAGS) main.cpp
 
 clean :

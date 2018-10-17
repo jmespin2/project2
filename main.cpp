@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <vector>
 #include <iostream>
+#include <fstream>
 #include <random>
 
 #include "input.h"
@@ -8,12 +9,14 @@
 
 using namespace std;
 
-InputClass input;
-input.Read("input_file.txt");
-double beta = input.toDouble(input.GetVariable("beta"));
-int Lx = input.toInteger(input.GetVariable("Lx"));
-int Ly = input.toInteger(input.GetVariable("Ly"));
+/*
+InputClass read_file;
+read_file.Read("input_file.txt");
 
+double beta = read_file.toDouble(read_file.GetVariable("beta"));
+int Lx = read_file.toInteger(read_file.GetVariable("Lx"));
+int Ly = read_file.toInteger(read_file.GetVariable("Ly"));
+*/
 
 void print_state(vector<vector<int>> &state)
 {
@@ -29,7 +32,26 @@ void print_state(vector<vector<int>> &state)
 
 	return;
 }
+/*
+void write_state(vector<vector<int>> &state)
+{
 
+	for(size_t i = 0; i < state.size(); i++)
+	{
+		for(size_t j = 0; j < state[i].size(); j++)
+		{
+			if(state[i][j] == -1)
+				state[i][j] = 0;
+
+			out_file << state[i][j] << " ";
+		}
+		out_file << endl;
+	}
+	out_file.close();
+
+	return;
+}
+*/
 vector<vector<int>> from_string(string &input, vector<vector<int>> &v)
 {
 	int j = 0;
@@ -181,7 +203,7 @@ void change_spins(vector<vector<int>> &v, int spin_x, int spin_y)
 int main()
 {
 	
-	string input = "100 110 101";
+	string input = "01100101 01100001 10010110 11110000 00001010 11110101 10111001 11000001";
 	cout << "The initialized state is " << input << endl;
 	vector<vector<int>> spins, new_spins;
 
@@ -216,45 +238,90 @@ int main()
 	/* Random number generator here */
 	const int range_from = 0;
 	const int range_to = rows - 1;
+	const int range_to_2 = 1;
 
 	random_device rand_dev;
 	mt19937 generator(rand_dev());
 	uniform_int_distribution<int> distr(range_from, range_to);
 
-	/* TO DO: Add sweeps of 10,000 */
+	random_device rand_dev2;
+	mt19937 gen(rand_dev2());
+	uniform_int_distribution<int> dis(range_from, range_to_2);
 
 	int spin_x = distr(generator);
 	int spin_y = distr(generator);
 
-	cout << "The randomly selected spin to switch is located at ";
-	cout << "[" << spin_x << "," << spin_y << "]" << endl;
-
-
+	int comparison = dis(gen);
 
 	/* Convert the input string into a matrix */
 	spins.resize(cols);
 	spins = from_string(input,spins);
 	print_state(spins);
 
+	cout << endl;
+
 	new_spins = spins;
 	change_spins(new_spins,spin_x,spin_y);
 	print_state(new_spins);
 	
-	double energy_value_old =  energy(spins, rows, cols);
-	double energy_value_new =  energy(new_spins, rows, cols);
-	double delta_energy_new_old = delta_e(spins,rows,cols,0,0,1);
-	double delta_energy_old_new = delta_e(spins,rows,cols,0,0,0);
+	double beta = 1.5;
 
+	int flag = 0;
 
-	if((delta_energy_new_old/delta_energy_old_new)*(exp(-beta*energy_value_new)/exp(-beta*energy_value_old)))
+	
+
+	cout << endl;
+	cout << "Writing the new state..." << endl;
+
+	ofstream out_file;
+	out_file.open("out.txt");
+
+	for(int sweep = 0; sweep < 10000; sweep++)
 	{
-		change_spins(spins,spin_x,spin_y);
-	}
+		for(int i = 0; i < rows*cols; i++)
+		{
+			spin_x = distr(generator);
+			spin_y = distr(generator);
 
+				double energy_value_old =  energy(spins, rows, cols);
+				double energy_value_new =  energy(new_spins, rows, cols);
+				double delta_energy_new_old = delta_e(spins,rows,cols,0,0,1);
+				double delta_energy_old_new = delta_e(spins,rows,cols,0,0,0);
+
+
+
+			if((delta_energy_new_old/delta_energy_old_new)*(exp(-beta*energy_value_new)/exp(-beta*energy_value_old)) > comparison)
+			{
+				change_spins(spins,spin_x,spin_y);
+			}
+		}
+
+		flag++;
+
+		if(flag >= 10)
+		{
+			for(size_t i = 0; i < spins.size(); i++)
+			{
+					for(size_t j = 0; j < spins[i].size(); j++)
+					{
+						if(spins[i][j] == -1)
+							spins[i][j] = 0;
+
+						out_file << spins[i][j] << " ";
+					}
+					out_file << endl;
+			}	
+		}	
+	}
+	out_file.close();
+/*
+	cout << "The randomly selected spin to switch is located at ";
+	cout << "[" << spin_x << "," << spin_y << "]" << endl;
 
 	cout << "The energy of the current state is " << energy_value_old << endl;
 	cout << "The difference of energy between the two states is " << delta_energy_new_old << endl;
 
+*/
 	cout << "The new state is " << endl;
 	print_state(spins);
 

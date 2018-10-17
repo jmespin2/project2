@@ -1,0 +1,5 @@
+beta=0.15
+Lx=3
+Ly=3
+outFile=out_L3_0.15
+bondsFile=bonds_3

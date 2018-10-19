@@ -75,12 +75,9 @@ vector<vector<int>> from_string(string &input, vector<vector<int>> &v)
 	return v;
 }
 
-double energy(vector<vector<int>> &v, int rows, int cols)
+void convert_0s_to_1s(vector<vector<int>> &v, int rows, int cols)
 {
-	double energy_value = 0;
-	double j_const = 1;
-
-	/* Convert the 0's in the matrix to -1's */
+		/* Convert the 0's in the matrix to -1's */
 	for(int i = 0; i < rows; i++)
 	{
 		for(int j = 0; j < cols; j++)
@@ -89,8 +86,14 @@ double energy(vector<vector<int>> &v, int rows, int cols)
 				v[i][j] = -1;
 		}
 	}
-	
-	
+}
+
+double energy(vector<vector<int>> &v, int rows, int cols)
+{
+	double energy_value = 0;
+	double j_const = 1;
+
+	convert_0s_to_1s(v,rows,cols);	
 
 	for(int i = 0; i < rows; i++)
 	{
@@ -131,6 +134,8 @@ double delta_e(vector<vector<int>> &v, int rows, int cols, int spin_x, int spin_
 	double energy_value = energy(v,rows,cols);
 	double old_energy_value = energy_value;
 	double j_const  = 1;
+
+	convert_0s_to_1s(v,rows,cols);
 
 	/* Up */
 	if((spin_y - 1) < 0)
@@ -190,20 +195,50 @@ double delta_e(vector<vector<int>> &v, int rows, int cols, int spin_x, int spin_
 void change_spins(vector<vector<int>> &v, int spin_x, int spin_y)
 {
 	/* Change the spin. */
-	if(v[spin_y][spin_x] == -1)
+	if(v[spin_y][spin_x] == 0)
+	{
+		v[spin_y][spin_x] = 1;
+	}
+	else if(v[spin_y][spin_x] == -1)
 	{
 		v[spin_y][spin_x] = 1;
 	}
 	else
 	{
-		v[spin_y][spin_x] = -1;
+		v[spin_y][spin_x] = 0;
 	}
+
 }
+
+double find_probability(vector<vector<int>> &v, double energy, double beta, vector<double> &p)
+{
+	double probability = 0;
+	double probability_sum = 0;
+
+	probability = exp(-beta*energy);
+	p.push_back(probability);
+
+	/* Calculate the sum of all probabilities */
+	for(int i = 0; i < p.size(); i++)
+	{
+		probability_sum += p[i];
+	}
+
+	probability = probability/probability_sum;
+	//probability = exp(-beta*energy);
+
+	return probability;
+}
+
 
 int main()
 {
+	vector<double> probabilities;
+
+	double P = 0;
+	double beta = 1.5;
 	
-	string input = "01100101 01100001 10010110 11110000 00001010 11110101 10111001 11000001";
+	string input = "100 101 011";
 	cout << "The initialized state is " << input << endl;
 	vector<vector<int>> spins, new_spins;
 
@@ -261,11 +296,7 @@ int main()
 	cout << endl;
 
 	new_spins = spins;
-	change_spins(new_spins,spin_x,spin_y);
-	print_state(new_spins);
 	
-	double beta = 1.5;
-
 	int flag = 0;
 
 	
@@ -274,45 +305,58 @@ int main()
 	cout << "Writing the new state..." << endl;
 
 	ofstream out_file;
+	ofstream probability_file;
+	probability_file.open("probability.txt");
 	out_file.open("out.txt");
 
+	/* Sweep here */
 	for(int sweep = 0; sweep < 10000; sweep++)
 	{
 		for(int i = 0; i < rows*cols; i++)
 		{
 			spin_x = distr(generator);
 			spin_y = distr(generator);
+			//cout << spin_x << " " << spin_y << endl;
 
-				double energy_value_old =  energy(spins, rows, cols);
-				double energy_value_new =  energy(new_spins, rows, cols);
-				double delta_energy_new_old = delta_e(spins,rows,cols,0,0,1);
-				double delta_energy_old_new = delta_e(spins,rows,cols,0,0,0);
+			/* Create a temporary configuration to check the energy */
+			change_spins(new_spins,spin_x,spin_y);
 
+			double energy_value_old =  energy(spins, rows, cols);
+			double energy_value_new =  energy(new_spins, rows, cols);
+			double delta_energy_old_new = delta_e(spins,rows,cols,spin_x,spin_y,1);
+			double delta_energy_new_old = delta_e(spins,rows,cols,spin_x,spin_y,0);
 
-
-			if((delta_energy_new_old/delta_energy_old_new)*(exp(-beta*energy_value_new)/exp(-beta*energy_value_old)) > comparison)
+			double e_compare = exp(-beta*energy_value_new)/exp(-beta*energy_value_old);
+			
+			/* Decide if we accept the new configuration */
+			if(e_compare > comparison)
 			{
-				change_spins(spins,spin_x,spin_y);
+				spins = new_spins;
 			}
-		}
+		
 
-		flag++;
+			flag++;
 
-		if(flag >= 10)
-		{
-			for(size_t i = 0; i < spins.size(); i++)
+			if(flag >= 10)
 			{
-					for(size_t j = 0; j < spins[i].size(); j++)
-					{
-						if(spins[i][j] == -1)
-							spins[i][j] = 0;
+				for(size_t i = 0; i < spins.size(); i++)
+				{
+						for(size_t j = 0; j < spins[i].size(); j++)
+						{
+							if(spins[i][j] == -1)
+								spins[i][j] = 0;
 
-						out_file << spins[i][j] << " ";
-					}
-					out_file << endl;
-			}	
-		}	
+							out_file << spins[i][j];
+						}
+						out_file << endl;
+				}	
+				probability_file << find_probability(spins, energy(spins, rows, cols), beta, probabilities);
+				probability_file << endl;
+			}
+		
+		}
 	}
+	probability_file.close();
 	out_file.close();
 /*
 	cout << "The randomly selected spin to switch is located at ";
@@ -322,6 +366,18 @@ int main()
 	cout << "The difference of energy between the two states is " << delta_energy_new_old << endl;
 
 */
+
+	/* Convert the 0's in the matrix to -1's */
+	for(int i = 0; i < rows; i++)
+	{
+		for(int j = 0; j < cols; j++)
+		{
+			if(spins[i][j] == -1)
+				spins[i][j] = 0;
+		}
+	}
+	
+
 	cout << "The new state is " << endl;
 	print_state(spins);
 

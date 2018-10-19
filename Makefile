@@ -1,15 +1,16 @@
 EXENAME = isingmodel
 OBJS = main.o
+HEADERS = input.h
 
-CXX = g++ 
-CXXFLAGS = -c
+CXX = g++
+CXXFLAGS = -g
 
 
-isingmodel: main.o input.h
+$(EXENAME): $(OBJS)
 	$(CXX) -o isingmodel main.o
 
-main.o : main.cpp input.h
-	$(CXX) $(CXXFLAGS) main.cpp
+main.o : main.cpp $(HEADERS)
+	$(CXX) -g -c main.cpp
 
 clean :
 	-rm -f *.o $(EXENAME)

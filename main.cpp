@@ -343,11 +343,15 @@ int main()
 			{
 				spins = new_spins;				
 			}
+
+			/* Calculate per configuration */
+			saved_energies.push_back(exp(-beta*E));
+			find_probability_sum(P,E,beta);
 	
 		}
 
 
-
+			/* Take a snapshot of the sweep */
 			if(flag >= 10)
 			{
 				for(size_t k = 0; k < spins.size(); k++)
@@ -362,12 +366,10 @@ int main()
 						}
 						out_file << endl;						
 				}	
-				/* Calculate per configuration */
-				saved_energies.push_back(exp(-beta*E));
-				find_probability_sum(P,E,beta);
+				
 			}
 			flag++;
-			probability_flag++;
+			
 			//cout << "P is " << P << endl;
 	}
 

@@ -210,39 +210,50 @@ void change_spins(vector<vector<int>> &v, int spin_x, int spin_y)
 
 }
 
-double find_probability(vector<vector<int>> &v, double energy, double beta, vector<double> &p)
+void find_probability_sum(double &P, double energy, double beta)
 {
-	double probability = 0;
-	double probability_sum = 0;
-
-	probability = exp(-beta*energy);
-	p.push_back(probability);
-
-	/* Calculate the sum of all probabilities */
-	for(int i = 0; i < p.size(); i++)
-	{
-		probability_sum += p[i];
-	}
-
-	probability = probability/probability_sum;
-	//probability = exp(-beta*energy);
-
-	return probability;
+	double probability = exp(-beta*energy);
+	//cout << "probability is " << probability << endl;
+	//cout << "energy is " << energy << endl;
+	P += probability;
 }
 
+void write_probabilities(double &P, vector<double>E)
+{
+	ofstream probability_file;
+	probability_file.open("probability.txt");
+
+	for(size_t i = 0; i < E.size(); i++)
+	{
+		probability_file << abs(E[i]/P) << endl;
+	}
+	//cout << P << endl;
+	probability_file.close();
+}
+
+double find_magnetization(vector<vector<int>> &v, int sweeps)
+{
+	double M = 0;
+
+	return M;
+}
 
 int main()
 {
-	vector<double> probabilities;
-
-	double P = 0;
-	double beta = 1.5;
 	
-	string input = "100 101 011";
-	cout << "The initialized state is " << input << endl;
-	vector<vector<int>> spins, new_spins;
 
-	cout << "Its matrix is " << endl;
+	
+	double beta = 0.3;
+	/* 27x27 input */
+	//string input = "100010110111010110101010110 100010110100010110101010110 101110110111010110101010110 100110110100010110101010110 100010110111011111101010110 101010110111010110101010110 000010110111010111111010111 100010110111011110101010110 111110110111010110101011111 101110110111010110101010110 100010110111010110101010110 011010110111010110101110110 100010100001010110101010110 100010110100010110101010110 100010000111010110101010110 100010110110010110101010110 100010110111010110111110110 101110110111010110101010110 111110110111010111101110110 101010110100010110101010000 100010110000010110101010110 100010110111010110101010000 000010110001010010101010110 100010110100010110101010110 000010110110010100101010111 100011110111011110101000110 100010111111011110111010101";
+	
+	string input = "111 111 111";
+
+	//cout << "The initialized state is " << input << endl;
+	vector<vector<int>> spins, new_spins;
+	vector<double> saved_energies;
+	double P = 0;
+	double E = 0;
 
 
 	/* Check the number of spaces */
@@ -286,11 +297,12 @@ int main()
 	int spin_x = distr(generator);
 	int spin_y = distr(generator);
 
-	int comparison = dis(gen);
-
+	
 	/* Convert the input string into a matrix */
 	spins.resize(cols);
 	spins = from_string(input,spins);
+	
+	cout << rows << ' ' << cols << endl;
 	print_state(spins);
 
 	cout << endl;
@@ -299,16 +311,13 @@ int main()
 	
 	int flag = 0;
 
-	
-
 	cout << endl;
 	cout << "Writing the new state..." << endl;
-
 	ofstream out_file;
-	ofstream probability_file;
-	probability_file.open("probability.txt");
 	out_file.open("out.txt");
 
+
+	int probability_flag = 0;
 	/* Sweep here */
 	for(int sweep = 0; sweep < 10000; sweep++)
 	{
@@ -321,42 +330,50 @@ int main()
 			/* Create a temporary configuration to check the energy */
 			change_spins(new_spins,spin_x,spin_y);
 
-			double energy_value_old =  energy(spins, rows, cols);
-			double energy_value_new =  energy(new_spins, rows, cols);
-			double delta_energy_old_new = delta_e(spins,rows,cols,spin_x,spin_y,1);
+			//double energy_value_old =  energy(spins, rows, cols);
+			//double energy_value_new =  energy(new_spins, rows, cols);
+			//double delta_energy_old_new = delta_e(spins,rows,cols,spin_x,spin_y,1);
 			double delta_energy_new_old = delta_e(spins,rows,cols,spin_x,spin_y,0);
 
-			double e_compare = exp(-beta*energy_value_new)/exp(-beta*energy_value_old);
-			
+			double e_compare = exp(-beta*delta_energy_new_old);
+			int comparison = dis(gen);
+
 			/* Decide if we accept the new configuration */
 			if(e_compare > comparison)
 			{
-				spins = new_spins;
+				spins = new_spins;				
 			}
-		
+	
+		}
 
-			flag++;
+
 
 			if(flag >= 10)
 			{
-				for(size_t i = 0; i < spins.size(); i++)
+				for(size_t k = 0; k < spins.size(); k++)
 				{
-						for(size_t j = 0; j < spins[i].size(); j++)
+						for(size_t j = 0; j < spins[k].size(); j++)
 						{
-							if(spins[i][j] == -1)
-								spins[i][j] = 0;
+							if(spins[k][j] == -1)
+								spins[k][j] = 0;
 
-							out_file << spins[i][j];
+							out_file << spins[k][j];
+							E = energy(spins,rows,cols);
 						}
-						out_file << endl;
+						out_file << endl;						
 				}	
-				probability_file << find_probability(spins, energy(spins, rows, cols), beta, probabilities);
-				probability_file << endl;
+				/* Calculate per configuration */
+				saved_energies.push_back(exp(-beta*E));
+				find_probability_sum(P,E,beta);
 			}
-		
-		}
+			flag++;
+			probability_flag++;
+			//cout << "P is " << P << endl;
 	}
-	probability_file.close();
+
+	write_probabilities(P,saved_energies);
+
+	
 	out_file.close();
 /*
 	cout << "The randomly selected spin to switch is located at ";

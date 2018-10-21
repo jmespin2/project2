@@ -231,11 +231,27 @@ void write_probabilities(double &P, vector<double>E)
 	probability_file.close();
 }
 
-double find_magnetization(vector<vector<int>> &v, int sweeps)
+double find_avg_energy(vector<double> &E, vector<double> &B, double beta)
 {
-	double M = 0;
+	double avg_e = 0;
+	double denominator = 0;
+	double numerator = 0;
 
-	return M;
+	for(size_t i = 0; i < E.size(); i++)
+	{
+		numerator = exp(-beta*E[i])*E[i];
+	}
+
+	for(size_t i = 0; i < E.size(); i++)
+	{
+		denominator += exp(-beta*E[i]);
+	}
+	cout << "num is " << numerator << endl;
+	cout << "denom is " << denominator << endl;
+	avg_e = numerator/denominator;
+
+
+	return avg_e;
 }
 
 int main()
@@ -243,7 +259,7 @@ int main()
 	
 
 	
-	double beta = 1.0;
+	double beta = 0.3;
 	/* 27x27 input */
 	//string input = "100010110111010110101010110 100010110100010110101010110 101110110111010110101010110 100110110100010110101010110 100010110111011111101010110 101010110111010110101010110 000010110111010111111010111 100010110111011110101010110 111110110111010110101011111 101110110111010110101010110 100010110111010110101010110 011010110111010110101110110 100010100001010110101010110 100010110100010110101010110 100010000111010110101010110 100010110110010110101010110 100010110111010110111110110 101110110111010110101010110 111110110111010111101110110 101010110100010110101010000 100010110000010110101010110 100010110111010110101010000 000010110001010010101010110 100010110100010110101010110 000010110110010100101010111 100011110111011110101000110 100010111111011110111010101";
 	
@@ -251,7 +267,7 @@ int main()
 
 	//cout << "The initialized state is " << input << endl;
 	vector<vector<int>> spins, new_spins;
-	vector<double> saved_energies;
+	vector<double> saved_energies, saved_boltz;
 	double P = 0;
 	double E = 0;
 
@@ -302,8 +318,8 @@ int main()
 	spins.resize(cols);
 	spins = from_string(input,spins);
 	
-	cout << rows << ' ' << cols << endl;
-	print_state(spins);
+	//cout << rows << ' ' << cols << endl;
+	//print_state(spins);
 
 	cout << endl;
 
@@ -314,7 +330,7 @@ int main()
 	cout << endl;
 	cout << "Writing the new state..." << endl;
 	ofstream out_file;
-	out_file.open("beta10.txt");
+	out_file.open("beta3.txt");
 
 
 	int probability_flag = 0;
@@ -330,9 +346,6 @@ int main()
 			/* Create a temporary configuration to check the energy */
 			change_spins(new_spins,spin_x,spin_y);
 
-			//double energy_value_old =  energy(spins, rows, cols);
-			//double energy_value_new =  energy(new_spins, rows, cols);
-			//double delta_energy_old_new = delta_e(spins,rows,cols,spin_x,spin_y,1);
 			double delta_energy_new_old = delta_e(spins,rows,cols,spin_x,spin_y,0);
 
 			double e_compare = exp(-beta*delta_energy_new_old);
@@ -343,9 +356,10 @@ int main()
 			{
 				spins = new_spins;				
 			}
-
+			E = energy(spins,rows,cols);
 			/* Calculate per configuration */
-			saved_energies.push_back(exp(-beta*E));
+			saved_energies.push_back(E);
+			saved_boltz.push_back(exp(-beta*E));
 			find_probability_sum(P,E,beta);
 	
 		}
@@ -362,29 +376,18 @@ int main()
 								spins[k][j] = 0;
 
 							out_file << spins[k][j];
-							E = energy(spins,rows,cols);
+							
 						}
 						out_file << endl;						
-				}	
-				
+				}				
 			}
 			flag++;
-			
-			//cout << "P is " << P << endl;
 	}
 
-	write_probabilities(P,saved_energies);
+	write_probabilities(P,saved_boltz);
 
 	
 	out_file.close();
-/*
-	cout << "The randomly selected spin to switch is located at ";
-	cout << "[" << spin_x << "," << spin_y << "]" << endl;
-
-	cout << "The energy of the current state is " << energy_value_old << endl;
-	cout << "The difference of energy between the two states is " << delta_energy_new_old << endl;
-
-*/
 
 	/* Convert the 0's in the matrix to -1's */
 	for(int i = 0; i < rows; i++)
@@ -399,6 +402,8 @@ int main()
 
 	cout << "The new state is " << endl;
 	print_state(spins);
+	double avg_energy = find_avg_energy(saved_energies,saved_boltz,beta);
+	cout << "Average energy is " << avg_energy << endl;
 
 	return 0; 
 }
